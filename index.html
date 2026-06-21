@@ -1,1 +1,960 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Notes">
+<meta name="theme-color" content="#F0EBE3">
+<title>Notes</title>
+<link rel="manifest" href="/manifest.json">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;margin:0;padding:0}
+html,body{background:#F0EBE3;font-family:-apple-system,'Helvetica Neue',sans-serif;height:100%}
+#app{max-width:480px;margin:0 auto;min-height:100vh;position:relative}
+input,textarea,button{font-family:inherit}
+.screen{display:none;flex-direction:column;min-height:100vh}
+.screen.active{display:flex}
+#screen-edit{height:100vh;overflow:hidden;}
+#screen-edit .edit-body{overflow-y:auto;}
+.hdr{padding:52px 16px 12px;background:#FAF7F4;border-bottom:1px solid #DDD5CA}
+.hdr-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
+.hdr-title{font-size:26px;font-weight:800;color:#7B5C3E;margin-top:4px}
+.btn{background:none;border:none;cursor:pointer;padding:4px;display:flex;align-items:center;justify-content:center}
+.icon-btn{background:#EDE5DC;border:none;border-radius:10px;width:40px;height:40px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.accent-btn{background:#C07850;border:none;border-radius:20px;color:#fff;font-size:14px;font-weight:700;padding:8px 16px;cursor:pointer}
+.scroll-area{flex:1;overflow-y:auto;padding-bottom:80px}
+.sep{height:0.5px;background:#DDD5CA;margin-left:16px}
+.search-wrap{padding:10px 16px 8px;background:#FAF7F4;border-bottom:1px solid #DDD5CA}
+.search-box{display:flex;align-items:center;gap:8px;background:#F0EBE3;border-radius:12px;padding:9px 14px}
+.search-box input{flex:1;background:transparent;border:none;outline:none;color:#7B5C3E;font-size:15px}
+.folder-row{display:flex;align-items:center;padding:14px 16px;background:#FAF7F4;cursor:pointer;gap:14px}
+.folder-icon-wrap{background:#EDE5DC;border-radius:10px;width:42px;height:42px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.folder-name{flex:1;font-size:16px;font-weight:600;color:#7B5C3E}
+.folder-count{font-size:12px;color:#C8AE96;margin-top:2px}
+.footer{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;display:flex;align-items:center;justify-content:space-between;padding:12px 24px 28px;background:#FAF7F4;border-top:1px solid #DDD5CA}
+.note-row{display:flex;align-items:center;padding:13px 16px;background:#FAF7F4;cursor:pointer;gap:12px;position:relative;overflow:hidden}
+.note-row-inner{display:flex;align-items:center;gap:12px;flex:1;min-width:0;transition:transform 0.22s ease}
+.note-title{font-size:16px;font-weight:700;color:#7B5C3E;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.note-date{font-size:13px;color:#C8AE96;margin-top:3px}
+.pin-circle{width:36px;height:36px;border-radius:50%;background:#C07850;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.swipe-actions{position:absolute;right:0;top:0;bottom:0;display:flex;transform:translateX(100%);transition:transform 0.22s ease}
+.swipe-btn{border:none;color:#fff;font-size:12px;font-weight:700;cursor:pointer;width:80px;padding:0}
+.sheet-overlay{position:fixed;inset:0;background:rgba(60,40,20,0.4);display:flex;align-items:flex-end;justify-content:center;z-index:100;display:none}
+.sheet-overlay.open{display:flex}
+.sheet{background:#FAF7F4;border-radius:20px 20px 0 0;padding:12px 20px 40px;width:100%;max-width:480px;display:flex;flex-direction:column;gap:14px;max-height:80vh;overflow-y:auto}
+.sheet-handle{width:36px;height:4px;background:#DDD5CA;border-radius:2px;align-self:center;margin-bottom:4px}
+.sheet-label{font-size:11px;font-weight:700;color:#C8AE96;text-transform:uppercase;letter-spacing:0.8px}
+.sheet-close{background:#EDE5DC;border:none;border-radius:12px;color:#7B5C3E;font-size:15px;font-weight:600;padding:13px 0;cursor:pointer;width:100%}
+.modal-overlay{position:fixed;inset:0;background:rgba(60,40,20,0.4);display:flex;align-items:flex-end;justify-content:center;z-index:200;display:none}
+.modal-overlay.open{display:flex}
+.modal{background:#FAF7F4;border-radius:20px 20px 0 0;padding:24px 20px 40px;width:100%;max-width:480px;display:flex;flex-direction:column;gap:12px}
+.modal-title{font-size:18px;font-weight:700;color:#7B5C3E;text-align:center}
+.modal-input{background:#F0EBE3;border:1.5px solid #DDD5CA;outline:none;border-radius:10px;padding:12px 14px;font-size:16px;color:#7B5C3E;width:100%}
+.modal-row{display:flex;gap:10px;margin-top:8px}
+.modal-cancel{flex:1;background:#EDE5DC;border:none;border-radius:12px;color:#7B5C3E;font-size:15px;font-weight:500;padding:13px 0;cursor:pointer}
+.modal-confirm{flex:1;background:#C07850;border:none;border-radius:12px;color:#fff;font-size:15px;font-weight:700;padding:13px 0;cursor:pointer}
+.edit-hdr{padding:52px 16px 10px;background:#FAF7F4;border-bottom:1px solid #DDD5CA;display:flex;align-items:center;justify-content:space-between}
+.edit-body{flex:1;overflow-y:auto;padding:16px 20px;display:flex;flex-direction:column;background:#F0EBE3}
+.title-input{background:transparent;border:none;outline:none;color:#7B5C3E;font-size:22px;font-weight:700;width:100%;letter-spacing:-0.3px}
+.body-textarea{background:transparent;border:none;outline:none;line-height:1.7;width:100%;min-height:50vh;resize:none;color:#7B5C3E;font-size:16px;margin-top:4px}
+.body-textarea.inline{min-height:0 !important;height:auto;overflow:hidden;padding:0;margin:0;}
+.color-dot{width:30px;height:30px;border-radius:50%;border:2px solid transparent;cursor:pointer;transition:all 0.15s}
+.size-btn{flex:1;padding:10px 0;border-radius:10px;border:none;cursor:pointer;font-size:13px}
+.icon-grid{display:flex;flex-wrap:wrap;gap:10px}
+.icon-choice{background:transparent;border:2px solid #DDD5CA;border-radius:12px;padding:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;width:48px;height:48px;transition:all 0.12s}
+.icon-choice.selected{background:#EDE5DC;border-color:#C07850}
+.move-btn{display:flex;align-items:center;gap:12px;background:#F0EBE3;border:none;border-radius:10px;padding:11px 12px;cursor:pointer;width:100%;text-align:left}
+.section-head{font-size:11px;font-weight:700;color:#C8AE96;text-transform:uppercase;letter-spacing:0.8px;padding:16px 16px 8px}
+.empty{text-align:center;color:#C8AE96;padding:60px 20px;font-size:15px}
+.back-btn{display:flex;align-items:center;gap:4px;background:none;border:none;cursor:pointer;color:#C07850;padding:4px}
+img.inline-img{max-width:100%;max-height:260px;border-radius:10px;object-fit:contain;display:block;margin:8px 0}
+.img-wrap{position:relative;display:inline-block;width:100%}
+.img-del{position:absolute;top:4px;right:4px;background:rgba(100,70,50,0.6);border:none;border-radius:50%;color:#fff;width:24px;height:24px;font-size:11px;cursor:pointer}
+</style>
+</head>
+<body>
+<div id="app">
 
+<!-- FOLDER SCREEN -->
+<div id="screen-folders" class="screen active">
+  <div class="hdr">
+    <div class="hdr-row">
+      <div class="hdr-title">Folders</div>
+      <div style="display:flex;gap:8px">
+        <button class="icon-btn" onclick="showBackup()">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 3v12M8 11l4 4 4-4" stroke="#A0856A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2" stroke="#A0856A" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </button>
+        <button class="icon-btn" onclick="showFolderModal()">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="#C07850" stroke-width="1.8"/><path d="M12 7v10M7 12h10" stroke="#C07850" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+  <div class="scroll-area" id="folder-list"></div>
+  <div class="footer">
+    <span id="total-count" style="font-size:13px;color:#C8AE96"></span>
+    <button class="accent-btn" onclick="showFolderModal()">＋New Folders</button>
+  </div>
+</div>
+
+<!-- NOTE LIST SCREEN -->
+<div id="screen-list" class="screen">
+  <div class="hdr">
+    <div class="hdr-row">
+      <button class="back-btn" onclick="goFolders()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M15 5L8 12L15 19" stroke="#C07850" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span style="font-size:14px;color:#C07850;font-weight:500">Folders</span>
+      </button>
+      <div style="display:flex;gap:8px">
+        <button class="icon-btn" onclick="showBackup()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 3v12M8 11l4 4 4-4" stroke="#A0856A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2" stroke="#A0856A" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </button>
+        <button class="accent-btn" onclick="newNote()">+ New</button>
+      </div>
+    </div>
+    <div class="hdr-title" id="list-title"></div>
+  </div>
+  <div class="search-wrap">
+    <div class="search-box">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="10.5" cy="10.5" r="6.5" stroke="#C8AE96" stroke-width="1.8"/><path d="M15.5 15.5L20 20" stroke="#C8AE96" stroke-width="1.8" stroke-linecap="round"/></svg>
+      <input id="search-input" placeholder="Search..." oninput="renderNoteList()">
+      <button class="btn" onclick="clearSearch()" id="clear-search" style="display:none;color:#C8AE96;font-size:13px">✕</button>
+    </div>
+  </div>
+  <div class="scroll-area" id="note-list"></div>
+</div>
+
+<!-- EDIT SCREEN -->
+<div id="screen-edit" class="screen">
+  <div class="edit-hdr">
+    <button class="back-btn" onclick="backToList()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M15 5L8 12L15 19" stroke="#C07850" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span id="edit-back-label" style="font-size:14px;color:#C07850;font-weight:500"></span>
+    </button>
+    <div style="display:flex;gap:8px;align-items:center">
+      <button class="icon-btn" onclick="toggleFormat()" id="format-btn">
+        <svg width="22" height="20" viewBox="0 0 22 20" fill="none"><text x="1" y="15" font-size="15" font-weight="600" fill="#A0856A" font-family="-apple-system,sans-serif">Aa</text></svg>
+      </button>
+      <button class="icon-btn" onclick="triggerImgPick()">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="2" y="4" width="20" height="16" rx="3" stroke="#A0856A" stroke-width="1.6"/><circle cx="8" cy="10" r="2" stroke="#A0856A" stroke-width="1.4"/><path d="M2 17l5-4 4 3 3-2.5 8 5.5" stroke="#A0856A" stroke-width="1.4" stroke-linejoin="round"/></svg>
+      </button>
+
+      <input type="file" id="img-pick" accept="image/*" multiple style="display:none" onchange="handleFileImg(event)">
+      <button class="icon-btn" onclick="showMoveFolder()" id="move-folder-btn">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M3 7.5C3 6.67 3.67 6 4.5 6H9.5l2 2.5H19.5c.83 0 1.5.67 1.5 1.5v8c0 .83-.67 1.5-1.5 1.5h-15C3.67 18 3 17.33 3 16.5V7.5z" stroke="#7A9EB5" stroke-width="1.6" stroke-linejoin="round"/></svg>
+      </button>
+      <button class="icon-btn" onclick="toggleLock()" id="lock-btn">
+        <svg id="lock-icon" width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="3" y="11" width="18" height="11" rx="2" stroke="#A0856A" stroke-width="1.6"/><path d="M7 11V7a5 5 0 0110 0v4" stroke="#A0856A" stroke-width="1.6" stroke-linecap="round"/></svg>
+      </button>
+      <button class="icon-btn" onclick="copyNote()" id="copy-btn">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="9" y="2" width="12" height="15" rx="2" stroke="#A0856A" stroke-width="1.6"/><path d="M5 7H4a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-1" stroke="#A0856A" stroke-width="1.6" stroke-linecap="round"/></svg>
+      </button>
+      <button class="btn" onclick="backToList()" style="color:#C07850;font-size:16px;font-weight:700;padding:4px 8px">Done</button>
+    </div>
+  </div>
+  <div class="edit-body" id="edit-body">
+    <input class="title-input" id="note-title" placeholder="Title">
+    <div style="height:0.5px;background:#DDD5CA;margin:8px 0"></div>
+    <div id="inline-content"></div>
+  </div>
+</div>
+
+<!-- SHEETS & MODALS -->
+<div class="sheet-overlay" id="format-sheet" onclick="closeSheet('format-sheet')">
+  <div class="sheet" onclick="event.stopPropagation()">
+    <div class="sheet-handle"></div>
+    <div class="sheet-label">Text Color</div>
+    <div style="display:flex;gap:9px;flex-wrap:wrap" id="color-picker"></div>
+    <div class="sheet-label">Text Size</div>
+    <div style="display:flex;gap:8px" id="size-picker"></div>
+    <div style="background:#F0EBE3;border-radius:10px;padding:12px 14px">
+      <span id="format-preview">Preview: Hello ABC 123</span>
+    </div>
+    <button class="sheet-close" onclick="closeSheet('format-sheet')">Close</button>
+  </div>
+</div>
+
+<div class="sheet-overlay" id="move-sheet" onclick="closeSheet('move-sheet')">
+  <div class="sheet" onclick="event.stopPropagation()">
+    <div class="sheet-handle"></div>
+    <div class="modal-title">Folders</div>
+    <div id="move-folder-list"></div>
+    <button class="sheet-close" onclick="closeSheet('move-sheet')">Cancel</button>
+  </div>
+</div>
+
+<div class="sheet-overlay" id="backup-sheet" onclick="closeSheet('backup-sheet')">
+  <div class="sheet" onclick="event.stopPropagation()">
+    <div class="sheet-handle"></div>
+    <div class="modal-title">Backup</div>
+    <div style="font-size:13px;color:#C8AE96;text-align:center">Save or restore as JSON file<br>iPhone: Files app → iCloud Drive</div>
+
+    <!-- Cloud Sync -->
+    <div style="background:#F0EBE3;border-radius:14px;padding:14px 16px;">
+      <div style="color:#7B5C3E;font-size:15px;font-weight:600;margin-bottom:10px">☁️ Cloud Sync</div>
+      <input id="sync-pin-input" type="password" placeholder="Enter sync PIN" style="width:100%;background:#FAF7F4;border:1.5px solid #DDD5CA;border-radius:10px;padding:10px 12px;font-size:15px;color:#7B5C3E;outline:none;margin-bottom:8px;">
+      <div style="display:flex;gap:8px;">
+        <button onclick="doCloudUpload()" style="flex:1;background:#C07850;border:none;border-radius:10px;color:#fff;font-size:14px;font-weight:700;padding:10px 0;cursor:pointer;">⬆️ Upload</button>
+        <button onclick="doCloudDownload()" style="flex:1;background:#4A7A6A;border:none;border-radius:10px;color:#fff;font-size:14px;font-weight:700;padding:10px 0;cursor:pointer;">⬇️ Download</button>
+      </div>
+      <div id="sync-msg" style="text-align:center;font-size:13px;color:#6BAA7A;font-weight:500;display:none;margin-top:8px"></div>
+    </div>
+
+    <button onclick="doBackup()" style="display:flex;align-items:center;gap:14px;background:#F0EBE3;border:none;border-radius:14px;padding:14px 16px;cursor:pointer;width:100%">
+      <span style="font-size:26px">⬇️</span>
+      <div style="text-align:left"><div style="color:#7B5C3E;font-size:15px;font-weight:600">Save Backup</div><div id="backup-count" style="color:#C8AE96;font-size:12px;margin-top:2px"></div></div>
+    </button>
+    <button onclick="triggerRestore()" style="display:flex;align-items:center;gap:14px;background:#F0EBE3;border:none;border-radius:14px;padding:14px 16px;cursor:pointer;width:100%">
+      <span style="font-size:26px">⬆️</span>
+      <div style="text-align:left"><div style="color:#7B5C3E;font-size:15px;font-weight:600">Backup restored</div><div style="color:#C8AE96;font-size:12px;margin-top:2px">existing Notes</div></div>
+    </button>
+    <input type="file" id="restore-input" accept=".json" style="display:none" onchange="doRestore(event)">
+    <div id="backup-msg" style="text-align:center;font-size:14px;color:#6BAA7A;font-weight:500;display:none"></div>
+    <button class="sheet-close" onclick="closeSheet('backup-sheet')">Close</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="folder-modal" onclick="closeFolderModal()">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div style="display:flex;justify-content:center">
+      <div id="folder-modal-icon-preview" style="background:#EDE5DC;border-radius:16px;width:64px;height:64px;display:flex;align-items:center;justify-content:center"></div>
+    </div>
+    <div class="modal-title" id="folder-modal-title">New Folders</div>
+    <input class="modal-input" id="folder-name-input" placeholder="Folders name">
+    <div class="sheet-label">Icon</div>
+    <div class="icon-grid" id="icon-grid"></div>
+    <div class="modal-row">
+      <button class="modal-cancel" onclick="closeFolderModal()">Cancel</button>
+      <button class="modal-confirm" onclick="saveFolderModal()">Create</button>
+    </div>
+    <button id="delete-folder-btn" onclick="deleteFolderModal()" style="display:none;background:none;border:none;color:#C0503A;font-size:13px;cursor:pointer;text-align:center">Delete this Folder</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="pw-modal" onclick="cancelPwModal()">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div style="font-size:34px;text-align:center" id="pw-modal-icon">🔒</div>
+    <div class="modal-title" id="pw-modal-title">Set Password</div>
+    <input class="modal-input" type="password" id="pw-input" placeholder="Password" maxlength="32">
+    <input class="modal-input" type="password" id="pw-confirm-input" placeholder="Confirm password" maxlength="32" style="display:none">
+    <div id="pw-error" style="font-size:13px;color:#C0503A;text-align:center;display:none"></div>
+    <div class="modal-row">
+      <button class="modal-cancel" onclick="cancelPwModal()">Cancel</button>
+      <button class="modal-confirm" onclick="confirmPwModal()">Set</button>
+    </div>
+  </div>
+</div>
+
+</div>
+
+<script>
+// ── State ──
+const NOTES_KEY = 'memo-notes', FOLDERS_KEY = 'memo-folders';
+let notes = [], folders = [], activeFolderId = 'all', activeNoteId = null, unlockedIds = new Set();
+let swipedNoteId = null, editingFolderId = null, pwMode = null, pwNoteId = null;
+let textColor = '#7B5C3E', fontSize = 16, selectedIcon = 'folder';
+let _savedTa = null, _savedPos = null;
+
+const COLORS = ['#5C3D2E','#7B5C3E','#C07850','#C0503A','#A0856A','#4A7A6A','#4A6A8A','#6A5A8A','#888888',
+                '#FFFFFF','#FFD60A','#FF9500','#FF453A','#FF6B9D','#30D158','#64D2FF','#BF5AF2','#8E8E93'];
+const SIZES = [{l:'XS',v:12},{l:'S',v:14},{l:'M',v:16},{l:'L',v:20},{l:'XL',v:26}];
+
+const ICONS = {
+  folder: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M3 7.5C3 6.67 3.67 6 4.5 6H9.5l2 2.5H19.5c.83 0 1.5.67 1.5 1.5v8c0 .83-.67 1.5-1.5 1.5h-15C3.67 18 3 17.33 3 16.5V7.5z" stroke="__C__" stroke-width="2" stroke-linejoin="round"/></svg>`,
+  note: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><rect x="4" y="2" width="16" height="20" rx="2.5" stroke="__C__" stroke-width="2"/><path d="M8 8h8M8 12h8M8 16h5" stroke="__C__" stroke-width="1.8" stroke-linecap="round"/></svg>`,
+  star: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M12 2l3 6.5H22l-5.5 4.5 2 7L12 16l-6.5 4 2-7L2 8.5h7L12 2z" stroke="__C__" stroke-width="2" stroke-linejoin="round"/></svg>`,
+  heart: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M12 21C12 21 3 14.5 3 8.5a5 5 0 019-3 5 5 0 019 3c0 6-9 12.5-9 12.5z" stroke="__C__" stroke-width="2" stroke-linejoin="round"/></svg>`,
+  camera: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><rect x="2" y="7" width="20" height="14" rx="3" stroke="__C__" stroke-width="2"/><circle cx="12" cy="14" r="3.5" stroke="__C__" stroke-width="2"/><path d="M8 7l2-3h4l2 3" stroke="__C__" stroke-width="2" stroke-linejoin="round"/></svg>`,
+  search: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><circle cx="10.5" cy="10.5" r="6.5" stroke="__C__" stroke-width="2"/><path d="M16 16l4.5 4.5" stroke="__C__" stroke-width="2.2" stroke-linecap="round"/></svg>`,
+  pin: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M12 2l2.5 5.5H20l-4.5 3.5L17 18l-5-3.5L7 18l1.5-7L4 7.5h5.5L12 2z" stroke="__C__" stroke-width="2" stroke-linejoin="round"/></svg>`,
+  bell: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M6 10a6 6 0 0112 0v4l2 3H4l2-3v-4z" stroke="__C__" stroke-width="2" stroke-linejoin="round"/><path d="M10 20a2 2 0 004 0" stroke="__C__" stroke-width="2"/></svg>`,
+  home: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M3 11L12 3l9 8v10a1 1 0 01-1 1H5a1 1 0 01-1-1V11z" stroke="__C__" stroke-width="2" stroke-linejoin="round"/></svg>`,
+  work: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><rect x="2" y="9" width="20" height="13" rx="2" stroke="__C__" stroke-width="2"/><path d="M8 9V6a4 4 0 018 0v3" stroke="__C__" stroke-width="2" stroke-linecap="round"/></svg>`,
+  pencil: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M4 20h4L19 9l-4-4L4 16v4z" stroke="__C__" stroke-width="2" stroke-linejoin="round"/></svg>`,
+  book: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M4 4h7a1 1 0 011 1v14a1 1 0 01-1 1H4V4z" stroke="__C__" stroke-width="2" stroke-linejoin="round"/><path d="M20 4h-7a1 1 0 00-1 1v14a1 1 0 001 1h7V4z" stroke="__C__" stroke-width="2" stroke-linejoin="round"/></svg>`,
+  clock: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="__C__" stroke-width="2"/><path d="M12 7v5l3 3" stroke="__C__" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  music: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M9 18V6l12-2v12" stroke="__C__" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="6" cy="18" r="3" stroke="__C__" stroke-width="2"/><circle cx="18" cy="16" r="3" stroke="__C__" stroke-width="2"/></svg>`,
+  leaf: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M17 8C17 8 19 13 14 17C9 21 4 20 4 20C4 20 3 15 8 12C13 9 17 8 17 8Z" stroke="__C__" stroke-width="2" stroke-linejoin="round"/><path d="M4 20l6-6" stroke="__C__" stroke-width="2" stroke-linecap="round"/></svg>`,
+  health: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M12 21C12 21 3 14.5 3 8.5a5 5 0 019-3 5 5 0 019 3c0 6-9 12.5-9 12.5z" stroke="__C__" stroke-width="2" stroke-linejoin="round"/><path d="M9 11h6M12 8v6" stroke="__C__" stroke-width="2" stroke-linecap="round"/></svg>`,
+};
+
+function icon(id, color='#A0856A') {
+  return (ICONS[id]||ICONS.folder).replace(/__C__/g, color);
+}
+
+function gid(s) { return document.getElementById(s); }
+function load(k,d) { try{return JSON.parse(localStorage.getItem(k))||d;}catch{return d;} }
+function save(k,v) { try{localStorage.setItem(k,JSON.stringify(v));}catch{} }
+function uid() { return Date.now().toString(36)+Math.random().toString(36).slice(2); }
+function fmtDate(ts) {
+  const d=new Date(ts), now=new Date(), diff=Math.floor((now-d)/86400000);
+  if(diff===0) return d.toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'});
+  if(diff<7) return d.toLocaleDateString('ja-JP',{month:'numeric',day:'numeric',weekday:'short'});
+  return d.toLocaleDateString('ja-JP',{year:'numeric',month:'numeric',day:'numeric'});
+}
+
+function init() {
+  notes = load(NOTES_KEY, []);
+  folders = load(FOLDERS_KEY, []);
+  buildFormatSheet();
+  buildIconGrid();
+  renderFolderList();
+  if('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(()=>{});
+}
+
+// ── Screens ──
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  gid('screen-'+id).classList.add('active');
+  window.scrollTo(0,0);
+}
+
+// ── Folder Screen ──
+function folderCount(fid) {
+  if(fid==='all') return notes.length;
+  if(fid==='none') return notes.filter(n=>!n.folderId||n.folderId==='none').length;
+  return notes.filter(n=>n.folderId===fid).length;
+}
+
+function renderFolderList() {
+  const allFolders = [{id:'all',name:'All Notes',icon:'folder',system:true},...folders,{id:'none',name:'Uncategorized',icon:'folder',system:true}];
+  const el = gid('folder-list');
+  el.innerHTML = allFolders.map(f=>`
+    <div onclick="openFolder('${f.id}')" style="background:#FAF7F4;border-radius:14px;margin:8px 12px;overflow:hidden;box-shadow:0 1px 3px rgba(100,70,50,0.07)">
+      <div class="folder-row">
+        <div class="folder-icon-wrap">${icon(f.icon,'#A0856A')}</div>
+        <div style="flex:1">
+          <div class="folder-name">${f.name}</div>
+          <div class="folder-count">${folderCount(f.id)} Notes</div>
+        </div>
+        ${!f.system?`<button class="icon-btn" style="width:34px;height:34px;border-radius:8px" onclick="event.stopPropagation();editFolder('${f.id}')">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M4 20h4L19 9l-4-4L4 16v4z" stroke="#A0856A" stroke-width="1.6" stroke-linejoin="round"/></svg>
+        </button>`:''}
+        <svg width="9" height="16" viewBox="0 0 9 16" fill="none"><path d="M1 1l7 7-7 7" stroke="#C8AE96" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+    </div>
+  `).join('');
+  gid('total-count').textContent = notes.length+' Notes';
+}
+
+function openFolder(fid) {
+  activeFolderId = fid;
+  const name = fid==='all'?'All Notes':fid==='none'?'Uncategorized':(folders.find(f=>f.id===fid)||{name:''}).name;
+  gid('list-title').textContent = name;
+  gid('edit-back-label').textContent = name;
+  gid('search-input').value = '';
+  swipedNoteId = null;
+  renderNoteList();
+  showScreen('list');
+}
+
+function goFolders() { showScreen('folders'); renderFolderList(); }
+
+// ── Note List ──
+function getListNotes() {
+  const q = (gid('search-input')||{value:''}).value.toLowerCase();
+  return notes.filter(n=>{
+    const inFolder = activeFolderId==='all'?true:activeFolderId==='none'?(!n.folderId||n.folderId==='none'):n.folderId===activeFolderId;
+    if(!inFolder) return false;
+    if(!q) return true;
+    if(n.password && !unlockedIds.has(n.id)) return (n.title||'').toLowerCase().includes(q);
+    return (n.title||'').toLowerCase().includes(q)||(n.body||'').replace(/\[IMG:[a-z0-9]+\]/g,'').toLowerCase().includes(q);
+  });
+}
+
+function renderNoteList() {
+  const q = gid('search-input').value;
+  gid('clear-search').style.display = q?'block':'none';
+  const list = getListNotes();
+  const pinned = list.filter(n=>n.pinned), unpinned = list.filter(n=>!n.pinned);
+  let html = '';
+  if(pinned.length) {
+    html += `<div class="section-head">Pinned</div><div style="height:0.5px;background:#DDD5CA"></div>`;
+    pinned.forEach(n=>{ html += noteRowHtml(n, true); });
+  }
+  if(unpinned.length) {
+    if(pinned.length) html += `<div class="section-head">Notes</div><div style="height:0.5px;background:#DDD5CA"></div>`;
+    unpinned.forEach(n=>{ html += noteRowHtml(n, false); });
+  }
+  if(!list.length) html = `<div class="empty">${q?'Matching Notes':'Notes not found'}</div>`;
+  gid('note-list').innerHTML = html;
+}
+
+function noteRowHtml(n, isPinned) {
+  const isLocked = !!n.password && !unlockedIds.has(n.id);
+  const title = n.title||(!isLocked&&(n.body||'').replace(/\[IMG:[a-z0-9]+\]/g,'').trim().split('\n')[0])||'New Notes';
+  const date = fmtDate(n.updatedAt||n.createdAt);
+  const swiped = swipedNoteId===n.id;
+  return `
+  <div id="row-${n.id}" style="position:relative;overflow:hidden" ontouchstart="rowTouchStart(event,'${n.id}')" ontouchend="rowTouchEnd(event,'${n.id}')">
+    <div class="swipe-actions" id="swipe-${n.id}" style="transform:${swiped?'translateX(0)':'translateX(100%)'}">
+      <button class="swipe-btn" style="background:#C07850" onclick="togglePin('${n.id}')">${n.pinned?'Unpin':'Pin'}</button>
+      <button class="swipe-btn" style="background:#7A9EB5" onclick="openMoveFromList('${n.id}')">Move</button>
+      <button class="swipe-btn" style="background:#8A7AAE" onclick="toggleLockFromList('${n.id}')">${n.password?'Unlock':'Lock'}</button>
+      <button class="swipe-btn" style="background:#C0503A" onclick="deleteNote('${n.id}')">Delete</button>
+    </div>
+    <div class="note-row" id="note-inner-${n.id}" style="transform:${swiped?'translateX(-320px)':'translateX(0)'}" onclick="noteRowClick('${n.id}')">
+      ${isPinned?`<div class="pin-circle"><svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 2l2.5 6H20l-4.5 3.5 1.5 6.5L12 14.5l-5 3.5 1.5-6.5L4 8h5.5L12 2z" stroke="#fff" stroke-width="1.6" stroke-linejoin="round" fill="rgba(255,255,255,0.3)"/></svg></div>`:''}
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;align-items:center;gap:6px">
+          ${n.password?`<svg width="13" height="13" viewBox="0 0 24 24" fill="none"><rect x="3" y="11" width="18" height="11" rx="2" stroke="#A0856A" stroke-width="1.6"/><path d="M7 11V7a5 5 0 0110 0v4" stroke="#A0856A" stroke-width="1.6" stroke-linecap="round"/></svg>`:''}
+          <span class="note-title">${escHtml(title)}</span>
+        </div>
+        <div class="note-date">${date}</div>
+      </div>
+      <svg width="9" height="16" viewBox="0 0 9 16" fill="none"><path d="M1 1l7 7-7 7" stroke="#C8AE96" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </div>
+    <div class="sep"></div>
+  </div>`;
+}
+
+function escHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+let _touchX = null;
+function rowTouchStart(e,id) { _touchX = e.touches[0].clientX; }
+function rowTouchEnd(e,id) {
+  if(_touchX===null) return;
+  const dx = _touchX - e.changedTouches[0].clientX;
+  if(dx>50) { swipedNoteId=id; renderNoteList(); }
+  else if(dx<-30) { swipedNoteId=null; renderNoteList(); }
+  _touchX=null;
+}
+function noteRowClick(id) {
+  if(swipedNoteId===id) { swipedNoteId=null; renderNoteList(); return; }
+  openNote(id);
+}
+function clearSearch() { gid('search-input').value=''; renderNoteList(); }
+
+// ── Note CRUD ──
+function newNote() {
+  const fid = activeFolderId==='all'?'none':(activeFolderId||'none');
+  const n = {id:uid(),title:'',body:'',images:[],pinned:false,password:null,folderId:fid,textColor:'#7B5C3E',fontSize:16,createdAt:Date.now(),updatedAt:Date.now()};
+  notes.unshift(n); save(NOTES_KEY,notes);
+  openNote(n.id);
+}
+
+function openNote(id) {
+  const n = notes.find(x=>x.id===id);
+  if(!n) return;
+  if(n.password && !unlockedIds.has(id)) { showPwModal('unlock', id); return; }
+  activeNoteId = id;
+  textColor = n.textColor||'#7B5C3E';
+  fontSize = n.fontSize||16;
+  gid('note-title').value = n.title||'';
+  gid('note-title').style.color = textColor;
+  renderInlineContent();
+  updateLockIcon();
+  swipedNoteId = null;
+  showScreen('edit');
+  setTimeout(()=>{ if(!n.title) gid('note-title').focus(); }, 80);
+}
+
+function saveNote() {
+  const n = notes.find(x=>x.id===activeNoteId); if(!n) return;
+  n.title = gid('note-title').value;
+  n.textColor = textColor; n.fontSize = fontSize;
+  n.updatedAt = Date.now();
+  // body is updated live via updateBody()
+  save(NOTES_KEY,notes);
+}
+
+function backToList() {
+  saveNote();
+  notes = notes.filter(n=>n.title||n.body||(n.images||[]).length>0);
+  save(NOTES_KEY,notes);
+  activeNoteId=null;
+  renderNoteList();
+  showScreen('list');
+}
+
+function deleteNote(id) {
+  notes = notes.filter(n=>n.id!==id);
+  save(NOTES_KEY,notes);
+  if(activeNoteId===id) { activeNoteId=null; showScreen('list'); }
+  swipedNoteId=null;
+  renderNoteList();
+}
+
+function togglePin(id) {
+  const n=notes.find(x=>x.id===id); if(!n) return;
+  n.pinned=!n.pinned; n.updatedAt=Date.now();
+  save(NOTES_KEY,notes); swipedNoteId=null; renderNoteList();
+}
+
+// ── Inline Editor ──
+function renderInlineContent() {
+  const n = notes.find(x=>x.id===activeNoteId); if(!n) return;
+  const body = n.body||'';
+  const images = n.images||[];
+  const imgMap = {};
+  images.forEach(i=>{ imgMap[i.id]=i.src; });
+  const el = gid('inline-content');
+  el.innerHTML = '';
+
+  const re = /\[IMG:([a-z0-9]+)\]/g;
+  let last=0, m;
+  const segs=[];
+  while((m=re.exec(body))!==null) {
+    segs.push({type:'text', content:body.slice(last,m.index)});
+    segs.push({type:'img', id:m[1]});
+    last=re.lastIndex;
+  }
+  segs.push({type:'text', content:body.slice(last)});
+
+  const hasImgs = images.some(i=>body.includes('[IMG:'+i.id+']'));
+
+  if(!hasImgs) {
+    const ta = document.createElement('textarea');
+    ta.className='body-textarea';
+    ta.value=body;
+    ta.style.color=textColor; ta.style.fontSize=fontSize+'px';
+    ta.placeholder='Type here...';
+    ta.onchange=ta.oninput=()=>updateBody(ta.value);
+    ta.addEventListener('paste', handlePaste);
+    ta.addEventListener('dragover', e=>{ if(e.dataTransfer.types.includes('Files')){e.preventDefault();ta.style.outline='2px solid #C07850';} });
+    ta.addEventListener('dragleave', ()=>{ ta.style.outline=''; });
+    ta.addEventListener('drop', e=>{
+      const files=[...e.dataTransfer.files].filter(f=>f.type.startsWith('image/'));
+      if(!files.length) return; e.preventDefault(); ta.style.outline='';
+      _savedTa=ta; _savedPos=ta.selectionStart; addImages(files);
+    });
+    el.appendChild(ta);
+    return;
+  }
+
+  let txtIdx=0;
+  segs.forEach((seg,i)=>{
+    if(seg.type==='img') {
+      const src=imgMap[seg.id]; if(!src) return;
+      const wrap=document.createElement('div');
+      wrap.className='img-wrap'; wrap.style.margin='4px 0';
+      const img=document.createElement('img');
+      img.className='inline-img'; img.src=src;
+      const del=document.createElement('button');
+      del.className='img-del'; del.textContent='✕';
+      del.onclick=()=>removeImg(seg.id);
+      wrap.appendChild(img); wrap.appendChild(del);
+      el.appendChild(wrap);
+    } else {
+      const ta=document.createElement('textarea');
+      ta.className='body-textarea';
+      ta.value=seg.content;
+      ta.style.color=textColor; ta.style.fontSize=fontSize+'px';
+      ta.style.minHeight='0';
+      ta.style.overflow='hidden';
+      ta.style.padding='2px 0';
+      if(i===0) ta.placeholder='Type here...';
+      // 高さ自動調整
+      const resize=()=>{ ta.style.height='0px'; ta.style.height=Math.max(ta.scrollHeight,28)+'px'; };
+      setTimeout(resize,0);
+      const myIdx=txtIdx++;
+      ta.onchange=ta.oninput=()=>{
+        resize();
+        const n2=notes.find(x=>x.id===activeNoteId); if(!n2) return;
+        const body2=n2.body||'';
+        const re2=/\[IMG:[a-z0-9]+\]/g;
+        let last2=0,m2,parts=[],ti=0;
+        while((m2=re2.exec(body2))!==null){
+          if(m2.index>last2) parts.push({type:'t',v:body2.slice(last2,m2.index),i:ti++});
+          parts.push({type:'img',v:m2[0]});
+          last2=re2.lastIndex;
+        }
+        parts.push({type:'t',v:body2.slice(last2),i:ti++});
+        let rebuilt='';
+        parts.forEach(p=>{ rebuilt+= p.type==='img'?p.v:(p.i===myIdx?ta.value:p.v); });
+        n2.body=rebuilt; n2.updatedAt=Date.now(); save(NOTES_KEY,notes);
+      };
+      ta.addEventListener('paste',handlePaste);
+      ta.addEventListener('dragover', e=>{ if(e.dataTransfer.types.includes('Files')){e.preventDefault();ta.style.outline='2px solid #C07850';} });
+      ta.addEventListener('dragleave', ()=>{ ta.style.outline=''; });
+      ta.addEventListener('drop', e=>{
+        const files=[...e.dataTransfer.files].filter(f=>f.type.startsWith('image/'));
+        if(!files.length) return; e.preventDefault(); ta.style.outline='';
+        _savedTa=ta; _savedPos=ta.selectionStart; addImages(files);
+      });
+      el.appendChild(ta);
+    }
+  });
+}
+
+function updateBody(val) {
+  const n=notes.find(x=>x.id===activeNoteId); if(!n) return;
+  n.body=val; n.updatedAt=Date.now(); save(NOTES_KEY,notes);
+}
+
+function addImgAtCursor(src) {
+  _insertImages([src]);
+}
+function addImages(files) {
+  const n=notes.find(x=>x.id===activeNoteId); if(!n) return;
+  let loaded=0;
+  const srcs=new Array(files.length);
+  files.forEach((f,i)=>{
+    const r=new FileReader();
+    r.onload=ev=>{ srcs[i]=ev.target.result; loaded++; if(loaded===files.length) _insertImages(srcs); };
+    r.readAsDataURL(f);
+  });
+}
+function _insertImages(srcs) {
+  const n=notes.find(x=>x.id===activeNoteId); if(!n) return;
+  const tas=gid('inline-content').querySelectorAll('textarea');
+  let pos=_savedPos, activeTa=_savedTa;
+  if(!activeTa) tas.forEach(ta=>{ if(document.activeElement===ta){activeTa=ta;pos=ta.selectionStart;} });
+  _savedTa=null; _savedPos=null;
+  const body=n.body||'';
+  let newBody=body;
+  const newImgs=[...(n.images||[])];
+  srcs.forEach(src=>{
+    const imgId=uid();
+    const placeholder='[IMG:'+imgId+']';
+    if(activeTa && pos!==null) {
+      const taIdx=Array.from(tas).indexOf(activeTa);
+      const re=/\[IMG:[a-z0-9]+\]/g;
+      let last=0,m,ti=0,parts=[];
+      while((m=re.exec(newBody))!==null){
+        if(m.index>last) parts.push({type:'t',v:newBody.slice(last,m.index),i:ti++});
+        parts.push({type:'img',v:m[0]});
+        last=re.lastIndex;
+      }
+      parts.push({type:'t',v:newBody.slice(last),i:ti++});
+      let rebuilt='';
+      parts.forEach(p=>{
+        if(p.type==='img'){rebuilt+=p.v;}
+        else if(p.i===taIdx){rebuilt+=p.v.slice(0,pos)+placeholder+p.v.slice(pos); pos+=placeholder.length;}
+        else{rebuilt+=p.v;}
+      });
+      newBody=rebuilt;
+    } else {
+      newBody=newBody+placeholder;
+    }
+    newImgs.push({id:imgId,src});
+  });
+  n.body=newBody; n.images=newImgs; n.updatedAt=Date.now(); save(NOTES_KEY,notes);
+  renderInlineContent();
+}
+
+function removeImg(imgId) {
+  const n=notes.find(x=>x.id===activeNoteId); if(!n) return;
+  n.images=(n.images||[]).filter(i=>i.id!==imgId);
+  n.body=(n.body||'').replace(new RegExp('\\[IMG:'+imgId+'\\]','g'),'');
+  n.updatedAt=Date.now(); save(NOTES_KEY,notes);
+  renderInlineContent();
+}
+
+function handlePaste(e) {
+  const items=e.clipboardData&&e.clipboardData.items;
+  if(!items) return;
+  const imgItems=[...items].filter(it=>it.type.startsWith('image/'));
+  if(!imgItems.length) return;
+  e.preventDefault();
+  let loaded=0; const srcs=new Array(imgItems.length);
+  imgItems.forEach((item,i)=>{
+    const r=new FileReader();
+    r.onload=ev=>{ srcs[i]=ev.target.result; loaded++; if(loaded===imgItems.length) _insertImages(srcs); };
+    r.readAsDataURL(item.getAsFile());
+  });
+}
+function triggerImgPick() {
+  const tas=gid('inline-content').querySelectorAll('textarea');
+  _savedTa=null; _savedPos=null;
+  tas.forEach(ta=>{ if(document.activeElement===ta){_savedTa=ta;_savedPos=ta.selectionStart;} });
+  gid('img-pick').click();
+}
+function handleFileImg(e) {
+  const files=Array.from(e.target.files); if(!files.length) return;
+  const savedTa=_savedTa, savedPos=_savedPos;
+  _savedTa=null; _savedPos=null;
+  let loaded=0;
+  const srcs=new Array(files.length);
+  files.forEach((f,i)=>{
+    const r=new FileReader();
+    r.onload=ev=>{
+      srcs[i]=ev.target.result;
+      loaded++;
+      if(loaded===files.length){
+        // 全部読み込み完了後にまとめて挿入
+        const n=notes.find(x=>x.id===activeNoteId); if(!n) return;
+        srcs.forEach(src=>{
+          const imgId=uid();
+          const placeholder='[IMG:'+imgId+']';
+          n.body=(n.body||'')+placeholder;
+          n.images=[...(n.images||[]),{id:imgId,src}];
+        });
+        n.updatedAt=Date.now(); save(NOTES_KEY,notes);
+        renderInlineContent();
+      }
+    };
+    r.readAsDataURL(f);
+  });
+  e.target.value='';
+}
+
+// title input
+gid('note-title').oninput=function(){ saveNote(); };
+gid('note-title').onkeydown=function(e){
+  if(e.key==='Enter'){ e.preventDefault(); const ta=gid('inline-content').querySelector('textarea'); if(ta) ta.focus(); }
+};
+
+// ── Format ──
+function buildFormatSheet() {
+  const cp=gid('color-picker');
+  cp.innerHTML=COLORS.map(c=>`<button class="color-dot" style="background:${c}" onclick="setColor('${c}')"></button>`).join('');
+  const sp=gid('size-picker');
+  sp.innerHTML=SIZES.map(s=>`<button class="size-btn" onclick="setSize(${s.v})">${s.l}</button>`).join('');
+  updateFormatUI();
+}
+function toggleFormat() { 
+  updateFormatUI();
+  openSheet('format-sheet'); 
+}
+function updateFormatUI() {
+  const n=notes.find(x=>x.id===activeNoteId);
+  if(n){textColor=n.textColor||'#7B5C3E';fontSize=n.fontSize||16;}
+  document.querySelectorAll('.color-dot').forEach(b=>{
+    b.style.border = b.style.background===textColor?`3px solid #C07850`:'2px solid transparent';
+  });
+  document.querySelectorAll('.size-btn').forEach(b=>{
+    const v=parseInt(b.textContent==='XS'?12:b.textContent==='S'?14:b.textContent==='M'?16:b.textContent==='L'?20:26);
+  });
+  gid('format-preview').style.color=textColor;
+  gid('format-preview').style.fontSize=fontSize+'px';
+}
+function setColor(c) {
+  textColor=c;
+  const n=notes.find(x=>x.id===activeNoteId); if(n){n.textColor=c;n.updatedAt=Date.now();save(NOTES_KEY,notes);}
+  gid('note-title').style.color=c;
+  gid('inline-content').querySelectorAll('textarea').forEach(ta=>ta.style.color=c);
+  updateFormatUI();
+}
+function setSize(v) {
+  fontSize=v;
+  const n=notes.find(x=>x.id===activeNoteId); if(n){n.fontSize=v;n.updatedAt=Date.now();save(NOTES_KEY,notes);}
+  gid('inline-content').querySelectorAll('textarea').forEach(ta=>ta.style.fontSize=v+'px');
+  updateFormatUI();
+}
+
+// ── Lock ──
+function updateLockIcon() {
+  const n=notes.find(x=>x.id===activeNoteId); if(!n) return;
+  const isLocked=!!n.password;
+  gid('lock-icon').innerHTML = isLocked
+    ? `<rect x="3" y="11" width="18" height="11" rx="2" stroke="#A0856A" stroke-width="1.6"/><path d="M7 11V7a5 5 0 019.9-1" stroke="#A0856A" stroke-width="1.6" stroke-linecap="round"/>`
+    : `<rect x="3" y="11" width="18" height="11" rx="2" stroke="#A0856A" stroke-width="1.6"/><path d="M7 11V7a5 5 0 0110 0v4" stroke="#A0856A" stroke-width="1.6" stroke-linecap="round"/>`;
+}
+function toggleLock() {
+  const n=notes.find(x=>x.id===activeNoteId); if(!n) return;
+  if(n.password) showPwModal('remove', n.id);
+  else showPwModal('set', n.id);
+}
+function toggleLockFromList(id) {
+  const n=notes.find(x=>x.id===id); if(!n) return;
+  swipedNoteId=null;
+  if(n.password) showPwModal('remove',id);
+  else showPwModal('set',id);
+}
+
+// ── Copy ──
+function copyNote() {
+  const n=notes.find(x=>x.id===activeNoteId); if(!n) return;
+  const text=[n.title,n.body].filter(Boolean).join('\n\n');
+  navigator.clipboard.writeText(text).then(()=>{
+    const btn=gid('copy-btn');
+    btn.innerHTML='<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M5 13l5 5L20 7" stroke="#6BAA7A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    setTimeout(()=>{ btn.innerHTML='<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="9" y="2" width="12" height="15" rx="2" stroke="#A0856A" stroke-width="1.6"/><path d="M5 7H4a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-1" stroke="#A0856A" stroke-width="1.6" stroke-linecap="round"/></svg>'; }, 1800);
+  });
+}
+
+// ── Move Folder ──
+function showMoveFolder() { openMoveSheet(activeNoteId); }
+function openMoveFromList(id) { swipedNoteId=null; renderNoteList(); openMoveSheet(id); }
+function openMoveSheet(noteId) {
+  const n=notes.find(x=>x.id===noteId); if(!n) return;
+  const cur=n.folderId||'none';
+  const allF=[{id:'none',name:'Uncategorized',icon:'folder'},...folders];
+  gid('move-folder-list').innerHTML=allF.map(f=>`
+    <button class="move-btn" onclick="moveNote('${noteId}','${f.id}')">
+      ${icon(f.icon, cur===f.id?'#C07850':'#C8AE96')}
+      <span style="flex:1;color:#7B5C3E;font-size:15px">${f.name}</span>
+      ${cur===f.id?'<span style="color:#C07850;font-weight:700">✓</span>':''}
+    </button>
+  `).join('');
+  openSheet('move-sheet');
+}
+function moveNote(noteId, fid) {
+  const n=notes.find(x=>x.id===noteId); if(!n) return;
+  n.folderId=fid; n.updatedAt=Date.now(); save(NOTES_KEY,notes);
+  closeSheet('move-sheet');
+  renderNoteList();
+}
+
+// ── Password Modal ──
+function showPwModal(mode, noteId) {
+  pwMode=mode; pwNoteId=noteId;
+  const icons={set:'🔒',unlock:'🔐',remove:'🔓'};
+  const titles={set:'Set Password',unlock:'Enter Password',remove:'Remove Lock'};
+  const confirms={set:'Set',unlock:'Open',remove:'Remove'};
+  gid('pw-modal-icon').textContent=icons[mode];
+  gid('pw-modal-title').textContent=titles[mode];
+  gid('pw-input').value=''; gid('pw-confirm-input').value='';
+  gid('pw-error').style.display='none';
+  gid('pw-confirm-input').style.display=mode==='set'?'block':'none';
+  document.querySelector('#pw-modal .modal-confirm').textContent=confirms[mode];
+  openModal('pw-modal');
+  setTimeout(()=>gid('pw-input').focus(),80);
+}
+function confirmPwModal() {
+  const pw=gid('pw-input').value, conf=gid('pw-confirm-input').value;
+  const err=gid('pw-error');
+  if(pwMode==='set'){
+    if(pw.length<4){err.textContent='At least 4 characters';err.style.display='block';return;}
+    if(pw!==conf){err.textContent='Password do not match';err.style.display='block';return;}
+    const n=notes.find(x=>x.id===pwNoteId); if(n){n.password=pw;save(NOTES_KEY,notes);}
+    unlockedIds.delete(pwNoteId);
+  } else if(pwMode==='unlock'){
+    const n=notes.find(x=>x.id===pwNoteId);
+    if(!n||n.password!==pw){err.textContent='Password is incorrect';err.style.display='block';return;}
+    unlockedIds.add(pwNoteId);
+    closeModal('pw-modal');
+    openNote(pwNoteId); return;
+  } else {
+    const n=notes.find(x=>x.id===pwNoteId);
+    if(!n||n.password!==pw){err.textContent='Password is incorrect';err.style.display='block';return;}
+    n.password=null; save(NOTES_KEY,notes);
+    unlockedIds.delete(pwNoteId);
+  }
+  closeModal('pw-modal');
+  updateLockIcon(); renderNoteList();
+}
+function cancelPwModal() { closeModal('pw-modal'); }
+
+// ── Folder Modal ──
+function buildIconGrid() {
+  gid('icon-grid').innerHTML=Object.keys(ICONS).map(id=>`
+    <button class="icon-choice${selectedIcon===id?' selected':''}" id="icbtn-${id}" onclick="selectIcon('${id}')">
+      ${icon(id,'#A0856A')}
+    </button>
+  `).join('');
+  updateIconPreview();
+}
+function selectIcon(id) {
+  selectedIcon=id;
+  document.querySelectorAll('.icon-choice').forEach(b=>b.classList.remove('selected'));
+  const btn=document.getElementById('icbtn-'+id);
+  if(btn) btn.classList.add('selected');
+  updateIconPreview();
+}
+function updateIconPreview() {
+  gid('folder-modal-icon-preview').innerHTML=icon(selectedIcon,'#A0856A');
+}
+function showFolderModal() { editingFolderId=null; selectedIcon='folder'; gid('folder-name-input').value=''; gid('folder-modal-title').textContent='New Folders'; document.querySelector('#folder-modal .modal-confirm').textContent='Create'; gid('delete-folder-btn').style.display='none'; buildIconGrid(); openModal('folder-modal'); setTimeout(()=>gid('folder-name-input').focus(),80); }
+function editFolder(id) {
+  const f=folders.find(x=>x.id===id); if(!f) return;
+  editingFolderId=id; selectedIcon=f.icon||'folder';
+  gid('folder-name-input').value=f.name;
+  gid('folder-modal-title').textContent='Folders Folder';
+  document.querySelector('#folder-modal .modal-confirm').textContent='Save';
+  gid('delete-folder-btn').style.display='block';
+  buildIconGrid(); openModal('folder-modal');
+}
+function saveFolderModal() {
+  const name=gid('folder-name-input').value.trim(); if(!name) return;
+  if(editingFolderId) {
+    const f=folders.find(x=>x.id===editingFolderId); if(f){f.name=name;f.icon=selectedIcon;}
+  } else {
+    folders.push({id:uid(),name,icon:selectedIcon});
+  }
+  save(FOLDERS_KEY,folders); closeFolderModal(); renderFolderList();
+}
+function deleteFolderModal() {
+  if(!editingFolderId) return;
+  folders=folders.filter(f=>f.id!==editingFolderId);
+  notes=notes.map(n=>n.folderId===editingFolderId?{...n,folderId:'none'}:n);
+  save(FOLDERS_KEY,folders); save(NOTES_KEY,notes);
+  closeFolderModal(); renderFolderList();
+}
+function closeFolderModal() { closeModal('folder-modal'); }
+
+// ── Backup ──
+function showBackup() {
+  gid('backup-count').textContent=notes.length+' Notes';
+  gid('backup-msg').style.display='none';
+  openSheet('backup-sheet');
+}
+function doBackup() {
+  const data=JSON.stringify({version:2,exportedAt:Date.now(),folders,notes},null,2);
+  const blob=new Blob([data],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url; a.download='memo-backup-'+new Date().toISOString().slice(0,10)+'.json';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+  showMsg('✅ Saved');
+}
+function triggerRestore() { gid('restore-input').click(); }
+function doRestore(e) {
+  const file=e.target.files[0]; if(!file) return;
+  const r=new FileReader();
+  r.onload=ev=>{
+    try{
+      const p=JSON.parse(ev.target.result);
+      const n=p.notes||p, f=p.folders||[];
+      if(!Array.isArray(n)) throw new Error();
+      notes=n; if(f.length) folders=f;
+      save(NOTES_KEY,notes); save(FOLDERS_KEY,folders);
+      showMsg('✅ '+n.length+' notes restored');
+      setTimeout(()=>{ closeSheet('backup-sheet'); renderFolderList(); },2000);
+    }catch{ showMsg('❌ File error'); }
+  };
+  r.readAsText(file); e.target.value='';
+}
+function showMsg(msg) { const el=gid('backup-msg'); el.textContent=msg; el.style.display='block'; setTimeout(()=>el.style.display='none',3000); }
+
+// ── Cloud Sync ──
+const SYNC_URL = '/api/sync';
+function getSyncPin() { return gid('sync-pin-input').value.trim(); }
+function showSyncMsg(msg, ok=true) {
+  const el=gid('sync-msg');
+  el.textContent=msg;
+  el.style.color=ok?'#6BAA7A':'#C0503A';
+  el.style.display='block';
+  setTimeout(()=>el.style.display='none',3000);
+}
+async function doCloudUpload() {
+  const pin=getSyncPin();
+  if(!pin){showSyncMsg('Please enter PIN',false);return;}
+  try {
+    const data=JSON.stringify({version:2,exportedAt:Date.now(),folders,notes});
+    const r=await fetch(SYNC_URL,{method:'POST',headers:{'Content-Type':'application/json','x-sync-pin':pin},body:data});
+    const j=await r.json();
+    if(r.ok) showSyncMsg('✅ Saved to cloud');
+    else showSyncMsg('❌ '+(j.error||'Error'),false);
+  } catch(e){ showSyncMsg('❌ Connection error',false); }
+}
+async function doCloudDownload() {
+  const pin=getSyncPin();
+  if(!pin){showSyncMsg('Please enter PIN',false);return;}
+  try {
+    const r=await fetch(SYNC_URL,{headers:{'x-sync-pin':pin}});
+    if(!r.ok){const j=await r.json();showSyncMsg('❌ '+(j.error||'Error'),false);return;}
+    const p=await r.json();
+    const n=p.notes||[], f=p.folders||[];
+    if(!Array.isArray(n)||n.length===0){showSyncMsg('No data in cloud',false);return;}
+    notes=n; if(f.length) folders=f;
+    save(NOTES_KEY,notes); save(FOLDERS_KEY,folders);
+    showSyncMsg('✅ '+n.length+' notes synced');
+    setTimeout(()=>{ closeSheet('backup-sheet'); renderFolderList(); },2000);
+  } catch(e){ showSyncMsg('❌ Connection error',false); }
+}
+
+// ── Sheet/Modal helpers ──
+function openSheet(id) { gid(id).classList.add('open'); }
+function closeSheet(id) { gid(id).classList.remove('open'); }
+function openModal(id) { gid(id).classList.add('open'); }
+function closeModal(id) { gid(id).classList.remove('open'); }
+
+init();
+</script>
+</body>
+</html>
