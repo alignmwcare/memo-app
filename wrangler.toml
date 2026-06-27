@@ -1,0 +1,11 @@
+name = "memo-app"
+main = "worker.js"
+compatibility_date = "2024-01-01"
+
+[assets]
+directory = "."
+binding = "ASSETS"
+
+[[kv_namespaces]]
+binding = "MEMO_STORE"
+id = "462caf22cfae40f88697519ba92ae774"
