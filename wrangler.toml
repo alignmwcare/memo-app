@@ -1,1 +1,9 @@
+name = "memo-app"
+compatibility_date = "2024-09-02"
 
+[assets]
+directory = "."
+
+[[kv_namespaces]]
+binding = "MEMO_STORE"
+id = "462caf22cfae40f88697519ba92ae774"
